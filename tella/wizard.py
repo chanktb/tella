@@ -41,7 +41,7 @@ _ASPECTS: list[tuple[str, str]] = [
 ]
 
 _MEDIA: list[tuple[str, str]] = [
-    ("ai_image", "AI image  - cinematic art, characters stay consistent across scenes"),
+    ("ai_image", "AI image  - generated art, characters stay consistent (pick style next)"),
     ("stock_photo", "Stock photo - real Pexels photographs, fast"),
     ("stock_video", "Stock video - real Pexels video clips, most motion"),
 ]
