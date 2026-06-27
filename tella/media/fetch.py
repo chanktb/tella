@@ -30,14 +30,17 @@ from tella.planner.models import TellaScenePlan
 
 logger = logging.getLogger("tella.media.fetch")
 
-MAX_CONCURRENT = 6
+# Keep concurrency modest: bursting many simultaneous requests at one CF
+# account triggers rate-limit 429s. 3 in flight + the global throttle in
+# ai_image keeps us under the limit while still rendering quickly.
+MAX_CONCURRENT = 3
 
-# Render canvas dims (mirrors VCM):
-#   9:16 → 1080×1920 (gen at 1024×1536 for FLUX sweet spot)
-#   16:9 → 1920×1080
+# Generation dims fed to the AI image provider. Smaller than the 1080×1920 /
+# 1920×1080 final canvas on purpose — the renderer upscales/crops, and a
+# smaller image costs fewer CF Neurons so a free account lasts far longer.
 _GEN_DIMS: dict[str, tuple[int, int]] = {
-    "9:16": (1024, 1536),
-    "16:9": (1536, 1024),
+    "9:16": (768, 1344),
+    "16:9": (1344, 768),
 }
 
 

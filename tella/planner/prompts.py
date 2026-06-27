@@ -239,6 +239,17 @@ fences, no commentary, no extra top-level keys.
 # Public API
 # ═══════════════════════════════════════════════════════════════════════
 
+_CLOSING_RULE = """\
+ENDING (MANDATORY — never end abruptly):
+
+The LAST scene MUST be a real closing — a line that resolves the story and
+gives the listener a sense of completion (a final reflection, a moral, a
+satisfying image, or a gentle send-off). It must feel like an ending, not a
+sentence that just happens to be last. Do NOT stop mid-arc, mid-action, or on
+a cliffhanger. A viewer should never think "wait, is that it?".
+"""
+
+
 def build_system_prompt(
     *,
     theme: Theme,
@@ -262,6 +273,8 @@ THEME: {theme}
 TONE: {tone}
 
 {structure}
+
+{_CLOSING_RULE}
 
 {media_block}
 

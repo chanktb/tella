@@ -29,6 +29,7 @@ import contextlib
 import logging
 import os
 import random
+import time
 from pathlib import Path
 
 import httpx
@@ -37,12 +38,35 @@ logger = logging.getLogger("tella.media.ai_image")
 
 DEFAULT_MODEL = "@cf/black-forest-labs/flux-1-schnell"
 DEFAULT_STEPS = 4
-DEFAULT_WIDTH = 1024
-DEFAULT_HEIGHT = 1024
+# Generate smaller than the final canvas — the renderer upscales/crops to
+# 1080×1920 anyway, and a smaller image costs fewer Neurons, so a free CF
+# account stretches across far more scenes before hitting its daily cap.
+DEFAULT_WIDTH = 768
+DEFAULT_HEIGHT = 1344
 
 HTTP_TIMEOUT = 60.0
 MAX_RETRIES_PER_ACCOUNT = 3
 RETRY_BACKOFF_SECONDS = 2.0
+
+# Global request throttle — CF rate-limits bursts, so we space out calls
+# across the whole process (all scenes share this), with a little jitter so
+# concurrent scenes don't align into a thundering herd.
+_MIN_REQUEST_INTERVAL = 0.45
+_throttle_lock = asyncio.Lock()
+_last_request_at = 0.0
+
+
+async def _throttle() -> None:
+    """Space CF requests at least ``_MIN_REQUEST_INTERVAL`` apart, plus jitter."""
+    global _last_request_at
+    async with _throttle_lock:
+        now = time.monotonic()
+        wait = _MIN_REQUEST_INTERVAL - (now - _last_request_at)
+        if wait > 0:
+            await asyncio.sleep(wait)
+        _last_request_at = time.monotonic()
+    # Jitter outside the lock so callers fan out instead of firing in lockstep.
+    await asyncio.sleep(random.uniform(0.0, 0.25))
 
 
 def resolve_all_credentials() -> list[tuple[str, str]]:
@@ -115,6 +139,7 @@ async def generate_image(
         quota_exhausted = False
         for attempt in range(1, MAX_RETRIES_PER_ACCOUNT + 1):
             try:
+                await _throttle()
                 async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
                     resp = await client.post(url, headers=headers, json=payload)
 

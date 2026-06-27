@@ -262,11 +262,11 @@ def main(argv: list[str] | None = None) -> int:
                 run_pipeline(
                     topic=choice.topic,
                     target_lang=choice.target_lang,
-                    theme="cinematic",  # wizard has no theme step; AI image = cinematic
+                    theme=choice.theme,  # cinematic, or playful when cartoon style picked
                     media_source=choice.media_source,
                     duration_mode=choice.duration_mode,
                     aspect_ratio=choice.aspect_ratio,
-                    voice_pace_name=None,
+                    voice_pace_name=choice.voice_pace_name,  # adapted to topic genre
                     voice_rate_custom=None,
                     voice_gender=choice.voice_gender,
                     out_root=out_root,

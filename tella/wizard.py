@@ -19,6 +19,7 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass, field
 
+from tella.ingest.genre_pace import pace_name_for
 from tella.ingest.lang_detect import detect_language
 from tella.ingest.script_cleaner import clean_script_text
 
@@ -54,7 +55,23 @@ _GENDERS: list[tuple[str, str]] = [
     ("female", "Female voice"),
 ]
 
+# AI-image visual style. Maps to an internal theme.
+#   cinematic -> realistic, filmic
+#   cartoon   -> vibrant cartoon (kid-friendly) + always kid storytelling voice
+_STYLES: list[tuple[str, str]] = [
+    ("cinematic", "Cinematic - realistic, filmic (great for adults / real-world topics)"),
+    ("cartoon", "Cartoon   - colorful illustration, kid-friendly (great for children)"),
+]
+_STYLE_TO_THEME = {"cinematic": "cinematic", "cartoon": "playful"}
+
 _LANG_NAME = dict(_LANGS)
+
+
+def _resolve_theme(media_source: str, style: str | None) -> str:
+    """AI image uses the chosen style's theme; stock modes stay cinematic."""
+    if media_source == "ai_image" and style:
+        return _STYLE_TO_THEME.get(style, "cinematic")
+    return "cinematic"
 
 
 @dataclass
@@ -67,6 +84,8 @@ class WizardResult:
     media_source: str
     duration_mode: str
     voice_gender: str
+    theme: str = "cinematic"
+    voice_pace_name: str | None = None
     topic: str = ""
     user_script: str | None = None
 
@@ -172,7 +191,13 @@ def run_wizard() -> WizardResult:
 
         aspect_ratio = _ask_choice("Step 2 - Aspect ratio", _ASPECTS, 0)
         media_source = _ask_choice("Step 3 - Where do the visuals come from?", _MEDIA, 0)
-        voice_gender = _ask_choice("Step 4 - Narrator voice", _GENDERS, 0)
+        style = None
+        if media_source == "ai_image":
+            style = _ask_choice("Step 4 - AI image style", _STYLES, 0)
+        voice_gender = _ask_choice("Step 5 - Narrator voice", _GENDERS, 0)
+
+        theme = _resolve_theme(media_source, style)
+        voice_pace_name = pace_name_for(user_script, theme)
 
         print()
         print("-" * 60)
@@ -180,8 +205,9 @@ def run_wizard() -> WizardResult:
         print(f"    Source    : {os.path.basename(file_path)} ({words} words)")
         print(f"    Language  : {_LANG_NAME.get(target_lang, target_lang)} (auto-detected)")
         print(f"    Aspect    : {aspect_ratio}")
-        print(f"    Visuals   : {_label(_MEDIA, media_source)}")
-        print(f"    Voice     : {_label(_GENDERS, voice_gender)}")
+        print(f"    Visuals   : {_label(_MEDIA, media_source)}"
+              + (f" / {style}" if style else ""))
+        print(f"    Voice     : {_label(_GENDERS, voice_gender)} ({voice_pace_name})")
         print("-" * 60)
         _confirm()
         return WizardResult(
@@ -191,6 +217,8 @@ def run_wizard() -> WizardResult:
             media_source=media_source,
             duration_mode=duration_mode,
             voice_gender=voice_gender,
+            theme=theme,
+            voice_pace_name=voice_pace_name,
             user_script=user_script,
             topic=os.path.splitext(os.path.basename(file_path))[0],
         )
@@ -200,8 +228,14 @@ def run_wizard() -> WizardResult:
     target_lang = _ask_choice("Step 2 - Narration language", _LANGS, 0)
     aspect_ratio = _ask_choice("Step 3 - Aspect ratio", _ASPECTS, 0)
     media_source = _ask_choice("Step 4 - Where do the visuals come from?", _MEDIA, 0)
-    duration_mode = _ask_choice("Step 5 - How long?", _DURATIONS, 0)
-    voice_gender = _ask_choice("Step 6 - Narrator voice", _GENDERS, 0)
+    style = None
+    if media_source == "ai_image":
+        style = _ask_choice("Step 5 - AI image style", _STYLES, 0)
+    duration_mode = _ask_choice("Step 6 - How long?", _DURATIONS, 0)
+    voice_gender = _ask_choice("Step 7 - Narrator voice", _GENDERS, 0)
+
+    theme = _resolve_theme(media_source, style)
+    voice_pace_name = pace_name_for(topic, theme)
 
     print()
     print("-" * 60)
@@ -209,9 +243,10 @@ def run_wizard() -> WizardResult:
     print(f"    Topic     : {topic}")
     print(f"    Language  : {_label(_LANGS, target_lang)}")
     print(f"    Aspect    : {aspect_ratio}")
-    print(f"    Visuals   : {_label(_MEDIA, media_source)}")
+    print(f"    Visuals   : {_label(_MEDIA, media_source)}"
+          + (f" / {style}" if style else ""))
     print(f"    Length    : {_label(_DURATIONS, duration_mode)}")
-    print(f"    Voice     : {_label(_GENDERS, voice_gender)}")
+    print(f"    Voice     : {_label(_GENDERS, voice_gender)} ({voice_pace_name})")
     print("-" * 60)
     _confirm()
     return WizardResult(
@@ -221,6 +256,8 @@ def run_wizard() -> WizardResult:
         media_source=media_source,
         duration_mode=duration_mode,
         voice_gender=voice_gender,
+        theme=theme,
+        voice_pace_name=voice_pace_name,
         topic=topic,
     )
 

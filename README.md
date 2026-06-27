@@ -15,7 +15,11 @@ Tella gives you: video.mp4   (1080×1920 or 1920×1080, narrated, ready to post)
 - **Two ways in**: type a **topic** (Tella writes the story) or drop a **`.txt`
   file** (Tella narrates *your* story word-for-word)
 - **9:16** vertical (TikTok / Reels / Shorts) or **16:9** horizontal (YouTube)
-- Visuals from **AI image** (cinematic art), **stock photo**, or **stock video**
+- Visuals from **AI image**, **stock photo**, or **stock video**. AI image
+  offers two styles: **cinematic** (realistic/filmic) or **cartoon**
+  (kid-friendly illustration)
+- **Reading pace adapts to the topic** — children's tales narrate slowly and
+  warmly, explainers narrate at a clear steady clip
 - **Consistent characters** — in AI image mode every recurring character *and*
   the setting are locked across scenes. A two-character fable keeps both
   characters consistent (a tortoise stays a tortoise, a hare stays a hare),
@@ -81,13 +85,18 @@ Step 3 - Aspect ratio
 Choose [1]:
 
 Step 4 - Where do the visuals come from?
-  * 1) AI image  - cinematic art, characters stay consistent across scenes
+  * 1) AI image  - characters stay consistent across scenes
     2) Stock photo - real Pexels photographs, fast
     3) Stock video - real Pexels video clips, most motion
 Choose [1]:
 
-Step 5 - How long?        (short ~90s / detailed 4-6 min)
-Step 6 - Narrator voice   (male / female)
+Step 5 - AI image style   (only if you picked AI image)
+  * 1) Cinematic - realistic, filmic
+    2) Cartoon   - colorful illustration, kid-friendly
+Choose [1]:
+
+Step 6 - How long?        (short ~90s / detailed 4-6 min)
+Step 7 - Narrator voice   (male / female)
 
 ------------------------------------------------------------
   Ready to render:
