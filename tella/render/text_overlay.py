@@ -185,16 +185,22 @@ def _draw_brand_row(
 ) -> int:
     """Draw a left-aligned brand pill: optional circular avatar + channel
     name (name only — no handle/slug). Returns the pill's bottom y."""
-    w, h = _measure(font, text)
+    # Use the ink bbox (not just width/height): PIL anchors text at the em-box
+    # origin, which includes empty space above the glyphs, so drawing at
+    # box_y+pad would push the text visually low. We subtract the bbox offset
+    # (l, t) so the actual ink is centered with equal padding top and bottom.
+    left, top, right, bottom = font.getbbox(text)
+    tw = right - left
+    th = bottom - top
     pad = BRAND_BOX_PADDING
-    avatar_size = h + 2 * pad - 8  # avatar fills the pill height minus a hair
+    avatar_size = th + 2 * pad - 8  # avatar fills the pill height minus a hair
     avatar = _circular_avatar(avatar_path, avatar_size) if avatar_path else None
     gap = 12 if avatar else 0
 
     box_x = safe_left
     box_y = top_y
-    box_w = pad + (avatar_size + gap if avatar else 0) + w + pad
-    box_h = h + 2 * pad
+    box_w = pad + (avatar_size + gap if avatar else 0) + tw + pad
+    box_h = th + 2 * pad
     alpha = max(0, min(255, int(BRAND_BOX_OPACITY * 255)))
     draw.rounded_rectangle(
         (box_x, box_y, box_x + box_w, box_y + box_h),
@@ -205,7 +211,9 @@ def _draw_brand_row(
     if avatar:
         canvas.paste(avatar, (cur_x, box_y + (box_h - avatar_size) // 2), avatar)
         cur_x += avatar_size + gap
-    draw.text((cur_x, box_y + pad), text, font=font, fill=(255, 255, 255, 240))
+    # Offset by (left, top) so the glyph ink lands exactly at the padded box
+    # interior — equal gap above and below.
+    draw.text((cur_x - left, box_y + pad - top), text, font=font, fill=(255, 255, 255, 240))
     return box_y + box_h
 
 
