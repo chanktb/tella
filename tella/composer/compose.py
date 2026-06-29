@@ -1,13 +1,16 @@
 """Compose timing for every scene in a plan.
 
-After Phase 3 (media) + Phase 4 (TTS) populate ``image_filenames`` +
-``audio_duration``, ``compose_timing`` walks the scenes and assigns
+After Phase 3 (media) + Phase 4 (TTS) populate ``image_filenames`` and per-
+scene ``audio_duration``, ``compose_timing`` walks the scenes and assigns
 ``start`` + ``duration`` per scene + sets the plan's ``total_duration``.
 
-A scene's duration = audio_duration + tail buffer (0.4 s) so the visual
-finishes resolving cleanly before the next scene cuts in.
-
-The render layer reads these timing fields to drive the ffmpeg pipeline.
+Continuous-narration model (CEO 2026-06-29): there is ONE narration audio
+track (``plan.narration_audio_filename``) covering the whole video. Each
+scene's ``audio_duration`` is a slice of that track set by
+:func:`tella.tts.synth_all.synthesize_all` via char-proportional split.
+The render layer plays the single audio over the concatenated video-only
+scenes, so we do NOT add per-scene tail buffers — that would desynchronize
+visuals from the continuous audio.
 """
 from __future__ import annotations
 
@@ -16,8 +19,6 @@ import logging
 from tella.planner.models import TellaScenePlan
 
 logger = logging.getLogger("tella.composer.compose")
-
-SCENE_TAIL_BUFFER = 0.4   # seconds of visual breathing room after audio ends
 
 
 def compose_timing(plan: TellaScenePlan) -> TellaScenePlan:
@@ -41,7 +42,10 @@ def compose_timing(plan: TellaScenePlan) -> TellaScenePlan:
                 scene.scene_index,
             )
             scene.audio_duration = 6.0
-        scene.duration = round(scene.audio_duration + SCENE_TAIL_BUFFER, 2)
+        # Visual duration == audio slice for this scene. No tail buffer —
+        # the continuous narration must not be interrupted by silent visual
+        # padding between scenes.
+        scene.duration = round(scene.audio_duration, 2)
         scene.start = round(cursor, 2)
         cursor = round(cursor + scene.duration, 2)
 
@@ -53,7 +57,4 @@ def compose_timing(plan: TellaScenePlan) -> TellaScenePlan:
     return plan
 
 
-__all__ = [
-    "SCENE_TAIL_BUFFER",
-    "compose_timing",
-]
+__all__ = ["compose_timing"]

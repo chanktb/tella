@@ -1,0 +1,24 @@
+{
+  "name": "Cosmos Fiction",
+  "niche_guide": "Kênh kể chuyện vũ trụ giả tưởng (speculative cosmology) bằng tiếng Việt. Mỗi tập là một kịch bản suy luận: chuyện gì xảy ra nếu một quy luật vật lý bị phá vỡ, một nền văn minh ngoài hành tinh thực sự tồn tại, hoặc vũ trụ của ta chỉ là một lớp trong vô số multiverse. Giọng kể trầm, chậm rãi, gợi trí tưởng tượng nhưng luôn neo vào kiến thức khoa học thật (thuyết tương đối, cơ học lượng tử, vũ trụ học) để người xem cảm thấy vừa mơ mộng vừa đáng tin. Khán giả mục tiêu: người Việt 18-40 tuổi yêu khoa học + science fiction (Interstellar, Three-Body Problem, Cosmos của Carl Sagan). Tránh: linh tinh tâm linh, giả khoa học, tin âm mưu.",
+  "seed_examples": [
+    "Nếu Mặt Trời biến thành lỗ đen, Trái Đất sẽ thế nào",
+    "Một nền văn minh sống trong lòng một ngôi sao sẽ nhìn vũ trụ ra sao",
+    "Chuyện gì xảy ra nếu thời gian chạy ngược trong một vùng không gian nhỏ",
+    "Liệu chúng ta có thể là một mô phỏng của một vũ trụ cao hơn",
+    "Một hành tinh quay nhanh hơn tốc độ ánh sáng của chính nó",
+    "Sự thật về khoảng không giữa các thiên hà — có thực sự trống rỗng",
+    "Nếu trọng lực biến mất trong 24 giờ, Trái Đất sẽ ra sao",
+    "Một đại dương rộng lớn giữa hai vì sao neutron — chuyện gì xảy ra bên trong",
+    "Vùng tối nhất trong vũ trụ: thực sự không có gì, hay có thứ chúng ta không thể thấy",
+    "Nếu chúng ta gặp một phiên bản Trái Đất cách đây một tỉ năm"
+  ],
+  "defaults": {
+    "lang": "vi",
+    "media": "ai_image",
+    "style": "cinematic",
+    "voice_gender": "male",
+    "duration": "detailed",
+    "aspect": "16:9"
+  }
+}

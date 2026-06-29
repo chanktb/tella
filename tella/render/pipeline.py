@@ -1,8 +1,18 @@
 """ffmpeg render pipeline — turn a fully-composed plan into a final MP4.
 
-Pipeline:
-  1. Per scene: assemble background + audio + title + caption → scene_NN.mp4
-  2. Concatenate all scene MP4s via the concat demuxer → video.mp4
+Pipeline (continuous-narration model, CEO 2026-06-29):
+  1. Per scene: assemble VIDEO-ONLY background + title + caption → scene_NN.mp4
+     (no audio map — keeps scene MP4s aligned strictly to visual timing)
+  2. Concatenate all scene MP4s → silent_video.mp4
+  3. Mix ``plan.narration_audio_filename`` onto the silent video → video.mp4
+
+Why one audio track:
+  Per-scene TTS files each carry ~0.3-0.6 s of leading + trailing silence
+  baked in by the synth engine. Concatenating N of them stacks ~1 s of
+  dead air on every scene boundary — fine for 8-scene videos, severe
+  monotony-breakage on 30-scene ones. A single TTS call produces one
+  utterance with natural inter-sentence breath pauses (much shorter and
+  rhythmically correct).
 
 Background handling per media_source:
   - ai_image / stock_photo : Ken Burns zoompan over the still image
@@ -162,7 +172,6 @@ def _build_bg_filter(
 async def _render_scene(
     *,
     asset_path: Path,
-    audio_path: Path,
     out_path: Path,
     duration: float,
     canvas_w: int,
@@ -180,6 +189,7 @@ async def _render_scene(
     channel_name: str | None = None,
     channel_avatar: str | None = None,
 ) -> Path:
+    """Render one VIDEO-ONLY scene MP4. Audio is mixed in once at final-mux."""
     is_video = _is_video_asset(asset_path)
 
     # Pre-render the text overlay as a transparent PNG (Pillow). This
@@ -215,37 +225,29 @@ async def _render_scene(
         cmd += ["-stream_loop", "-1", "-i", str(asset_path)]
     else:
         cmd += ["-loop", "1", "-i", str(asset_path)]
-    cmd += ["-i", str(audio_path)]
 
     if overlay_png is not None:
-        # 3rd input: the transparent PNG. ffmpeg overlay composites it
+        # 2nd input: the transparent PNG. ffmpeg overlay composites it
         # on top of the bg chain.
         cmd += ["-i", str(overlay_png)]
-        filter_complex = f"[0:v]{bg_filter}[bg];[bg][2:v]overlay=0:0[v]"
+        filter_complex = f"[0:v]{bg_filter}[bg];[bg][1:v]overlay=0:0[v]"
     else:
         filter_complex = f"[0:v]{bg_filter}[v]"
 
     cmd += [
         "-filter_complex", filter_complex,
         "-map", "[v]",
-        "-map", "1:a",
         "-t", f"{duration:.3f}",
         "-r", str(OUTPUT_FPS),
         "-c:v", "libx264",
         "-preset", "veryfast",
         # CRF 26 is well within the "visually transparent on mobile" band
-        # (22-28). Bumping from 22 → 26 shrinks the H.264 stream ~40 %
-        # with no perceptible quality loss on a phone screen — the user
-        # uploads to TikTok/Reels which re-compress anyway.
+        # (22-28). The H.264 stream stays ~40% smaller than CRF 22 with
+        # no perceptible quality loss on a phone screen — TikTok/Reels
+        # re-compress anyway.
         "-crf", "26",
         "-pix_fmt", "yuv420p",
-        "-c:a", "aac",
-        # Edge TTS narration is mono — re-encoding to stereo 128 k just
-        # duplicated the channel. 96 k mono is the right size for voice
-        # and saves another ~3-4 MB on a 4-minute video.
-        "-b:a", "96k",
-        "-ar", "44100",
-        "-ac", "1",
+        "-an",                       # video-only scene
         "-movflags", "+faststart",
         str(out_path),
     ]
@@ -267,7 +269,7 @@ async def _render_scene(
 async def _concat_scenes(
     scene_mp4s: list[Path], out_path: Path, work_dir: Path,
 ) -> Path:
-    """Concatenate scene MP4s via the concat demuxer (codec copy).
+    """Concatenate VIDEO-ONLY scene MP4s via the concat demuxer (codec copy).
 
     The concat demuxer resolves each ``file`` line RELATIVE TO THE LIST
     FILE itself — not the cwd. Since our list lives next to the scene
@@ -286,6 +288,7 @@ async def _concat_scenes(
         "-f", "concat", "-safe", "0",
         "-i", str(list_file),
         "-c", "copy",
+        "-an",                       # explicit video-only output
         "-movflags", "+faststart",
         str(out_path),
     ]
@@ -298,6 +301,43 @@ async def _concat_scenes(
     if proc.returncode != 0:
         msg = stderr.decode("utf-8", errors="replace")
         raise RuntimeError(f"ffmpeg concat failed:\n{msg[-1500:]}")
+    return out_path
+
+
+async def _mux_audio(
+    silent_video: Path, audio: Path, out_path: Path,
+) -> Path:
+    """Mix the continuous narration onto the concatenated silent video.
+
+    Uses ``-shortest`` so any tiny mismatch (round-off between the audio's
+    real duration and the sum of scene visual durations) ends cleanly
+    without a trailing silent frame. Audio is encoded to AAC 96k mono —
+    Edge/Google TTS output is mono speech.
+    """
+    cmd = [
+        "ffmpeg", "-y", "-loglevel", "error",
+        "-i", str(silent_video),
+        "-i", str(audio),
+        "-map", "0:v",
+        "-map", "1:a",
+        "-c:v", "copy",
+        "-c:a", "aac",
+        "-b:a", "96k",
+        "-ar", "44100",
+        "-ac", "1",
+        "-shortest",
+        "-movflags", "+faststart",
+        str(out_path),
+    ]
+    proc = await asyncio.create_subprocess_exec(
+        *cmd,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    _, stderr = await proc.communicate()
+    if proc.returncode != 0:
+        msg = stderr.decode("utf-8", errors="replace")
+        raise RuntimeError(f"ffmpeg final mux failed:\n{msg[-1500:]}")
     return out_path
 
 
@@ -348,20 +388,19 @@ async def render(plan: TellaScenePlan, job_dir: Path) -> Path:
         len(body_scenes), canvas_w, canvas_h, plan.total_duration,
     )
 
+    if not plan.narration_audio_filename:
+        raise RuntimeError(
+            "plan.narration_audio_filename empty — did synthesize_all run?"
+        )
+
     for scene in body_scenes:
         if not scene.image_filenames:
             raise RuntimeError(
                 f"scene {scene.scene_index}: no image_filenames "
                 "(did fetch_assets run?)"
             )
-        if not scene.audio_filename:
-            raise RuntimeError(
-                f"scene {scene.scene_index}: no audio_filename "
-                "(did synthesize_all run?)"
-            )
 
         asset_path = job_dir / scene.image_filenames[0]
-        audio_path = job_dir / scene.audio_filename
         out_mp4 = work_dir / f"scene_{scene.scene_index:02d}.mp4"
 
         title_lines = wrap(scene.title, title_cpl, max_lines=TITLE_MAX_LINES)
@@ -371,7 +410,6 @@ async def render(plan: TellaScenePlan, job_dir: Path) -> Path:
 
         await _render_scene(
             asset_path=asset_path,
-            audio_path=audio_path,
             out_path=out_mp4,
             duration=scene.duration,
             canvas_w=canvas_w,
@@ -391,13 +429,21 @@ async def render(plan: TellaScenePlan, job_dir: Path) -> Path:
         )
         scene_mp4s.append(out_mp4)
         logger.info(
-            "rendered scene %d/%d (%.2fs)",
+            "rendered scene %d/%d (%.2fs, video-only)",
             scene.scene_index, len(body_scenes), scene.duration,
         )
 
+    # Stage 2: concat the video-only scenes → silent_video.mp4
+    silent_video = work_dir / "silent_video.mp4"
+    await _concat_scenes(scene_mp4s, silent_video, work_dir)
+    logger.info("concat done → %s (silent)", silent_video.name)
+
+    # Stage 3: mux the single continuous narration onto the silent video.
     final_path = job_dir / "video.mp4"
-    await _concat_scenes(scene_mp4s, final_path, work_dir)
-    logger.info("render done → %s (%.2fs)", final_path, plan.total_duration)
+    narration_path = job_dir / plan.narration_audio_filename
+    await _mux_audio(silent_video, narration_path, final_path)
+    logger.info("render done → %s (%.2fs, continuous narration mixed)",
+                final_path, plan.total_duration)
     return final_path
 
 

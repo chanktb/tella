@@ -23,6 +23,7 @@ from tella._gemini import (
     DEFAULT_MODEL_PLAN_DETAILED,
     DEFAULT_MODEL_PLAN_SHORT,
     get_client,
+    is_transient_quota_error,
     parse_json_loose,
 )
 from tella._voice_pace import VoicePace, default_pace_for_theme
@@ -153,10 +154,19 @@ async def plan_story(
             )
         except Exception as exc:
             last_err = exc
+            transient = is_transient_quota_error(exc)
             logger.warning(
-                "plan_story attempt %d Gemini error %s: %s",
-                attempt, type(exc).__name__, exc,
+                "plan_story attempt %d Gemini error %s%s: %s",
+                attempt, type(exc).__name__,
+                " (transient — will rotate key + backoff)" if transient else "",
+                exc,
             )
+            if attempt < MAX_ATTEMPTS and transient:
+                # Rebuild client → get_client() random-picks another key from
+                # GEMINI_API_KEYS so the next attempt doesn't burn the same
+                # quota. Small backoff so we don't tail-thrash the API.
+                client = get_client()
+                await asyncio.sleep(2 * attempt)
             continue
 
         last_raw = resp.text or ""
@@ -320,10 +330,16 @@ async def plan_story_from_script(
             )
         except Exception as exc:
             last_err = exc
+            transient = is_transient_quota_error(exc)
             logger.warning(
-                "plan_story_from_script attempt %d Gemini error %s: %s",
-                attempt, type(exc).__name__, exc,
+                "plan_story_from_script attempt %d Gemini error %s%s: %s",
+                attempt, type(exc).__name__,
+                " (transient — will rotate key + backoff)" if transient else "",
+                exc,
             )
+            if attempt < MAX_ATTEMPTS and transient:
+                client = get_client()
+                await asyncio.sleep(2 * attempt)
             continue
 
         last_raw = resp.text or ""

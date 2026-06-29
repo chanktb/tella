@@ -4,7 +4,14 @@ Two axes of variation:
 
   - ``theme``         : parable | cinematic | playful | mindfulness
                         (defines storytelling tone + image style suffix)
-  - ``duration_mode`` : short (5-8 scenes, 60-120s) | detailed (12-20 scenes, 4-6min)
+  - ``duration_mode`` : short (~70-130s total, ~10-18 beats)
+                        detailed (~3-5min total, ~25-40 beats)
+
+A "scene" in Tella IS a visual beat — one image per scene. Scene count is
+NOT fixed by mode; it emerges from the narration. When the narration shifts
+subject/action/location, that's a new scene. Short reflective stretches
+collapse into one scene; action-heavy stretches expand into many. This
+prevents the "single image lingering 20 seconds" monotony.
 
 Plus a third "always do" instruction block embedded into every prompt:
 
@@ -74,44 +81,79 @@ _THEME_TONE: dict[Theme, str] = {
 # ─── Duration mode structure ────────────────────────────────────────────
 
 _SHORT_STRUCTURE = """\
-STRUCTURE — short mode (5-8 scenes, ~60-120 seconds total):
-  1.   HOOK         — opening line that lands the listener in the world
-  2-3. INTRO        — protagonist + setting + central tension (1-2 scenes)
-  4-6. RISING       — events escalate toward a turning point (2-3 scenes)
-  7.   TURN         — pivotal moment or insight
-  8.   CLOSE        — resolution + brief emotional landing
+STRUCTURE — short mode (~70-130 seconds total, ~10-18 scenes):
 
-Each scene's voice_script: 2-4 complete sentences (~30-55 words in
-target_lang for English / ~40-70 chữ for Vietnamese), fitting 10-20
-seconds of narration. NO trailing periods on titles. Voice copy must
-feel natural when spoken aloud — no run-on sentences, no academic prose.
+Narrative arc (use phases, NOT scene counts):
+  - HOOK     — opening beat that lands the listener in the world
+  - SETUP    — protagonist + setting + central tension (a few beats)
+  - RISING   — events escalate toward a turning point (the bulk of beats)
+  - TURN     — the pivotal moment or insight (one tight beat)
+  - CLOSE    — resolution + brief emotional landing
+
+Each scene's voice_script — HARD CAPS:
+  - 1 sentence (occasionally 2 short ones)
+  - English: 8-18 words. Vietnamese: 12-22 chữ. NEVER exceed these.
+  - Target 4-7 seconds of speech per scene.
+
+If a passage would exceed the cap, SPLIT it into 2+ consecutive scenes with
+the next sentence as its own beat. SHORTER beats are better than longer ones
+— when the narration shifts subject, action, location, or POV, START A NEW
+SCENE. One image lingering > 8 seconds of speech is a planning failure.
+
+Total scene count emerges from content density — typically 10-18 for this
+mode. The schema accepts 3-40. Aim for the upper half of this range when in
+doubt; padding from 6 long beats to 12 tight beats is a quality WIN.
+
+NO trailing periods on titles. Voice copy feels natural when spoken aloud
+— no run-on sentences, no academic prose.
 """
 
 _DETAILED_STRUCTURE = """\
-STRUCTURE — detailed mode (12-20 scenes, ~4-6 minutes total):
+STRUCTURE — detailed mode (~3-5 minutes total, ~25-40 scenes):
 
-  Act 1 — Setup (scenes 1-5):
-    1.   COLD OPEN  — striking image / question / line that hooks
-    2-3. WORLD      — protagonist, setting, era, daily rhythm
-    4.   FLAW       — protagonist's hidden flaw, doubt, or desire
-    5.   CATALYST   — event that pulls them into the journey
+Narrative arc — use 3 acts as guidance, NOT a fixed beat count:
 
-  Act 2 — Confrontation (scenes 6-14):
-    6-8.   TRIAL    — obstacles, temptations, loss
-    9-11.  CLIMAX   — crisis peaks, decision must be made
-    12.    MENTOR   — a teacher / elder / inner voice speaks one line
-    13.    REFLECT  — protagonist sits with the choice
-    14.    PIVOT    — the choice made; action taken
+  Act 1 — Setup
+    COLD OPEN  — striking image / question / line that hooks
+    WORLD      — protagonist, setting, era, daily rhythm
+    FLAW       — protagonist's hidden flaw, doubt, or desire
+    CATALYST   — the event that pulls them into the journey
 
-  Act 3 — Resolution (scenes 15-20):
-    15.    OUTCOME  — consequence of the pivot
-    16-17. INSIGHT  — narrator distills the lesson over 2 scenes
-    18.    CLOSE    — final image + brief invitation to the listener
-    (19-20 optional for fuller pacing)
+  Act 2 — Confrontation
+    TRIAL      — obstacles, temptations, loss
+    CLIMAX     — crisis peaks, decision must be made
+    MENTOR     — a teacher / elder / inner voice speaks one line
+    REFLECT    — protagonist sits with the choice
+    PIVOT      — the choice made; action taken
 
-Each scene's voice_script: 3-5 complete sentences (~45-80 words English /
-~55-100 chữ Vietnamese), fitting 15-25 seconds of narration. NEVER
-truncate mid-thought. Voice copy reads like spoken word, not text.
+  Act 3 — Resolution
+    OUTCOME    — consequence of the pivot
+    INSIGHT    — narrator distills the lesson (over multiple beats if needed)
+    CLOSE      — final image + brief invitation to the listener
+
+Each act spans MULTIPLE scenes — each scene is a visual cut, not an act.
+A single act can take 3-12 scenes depending on the density of action in it.
+
+Each scene's voice_script — HARD CAPS:
+  - 1-2 sentences (occasionally 3 if they're each very short)
+  - English: 10-25 words. Vietnamese: 15-35 chữ. NEVER exceed these.
+  - Target 5-9 seconds of speech per scene.
+
+If a passage would exceed the cap, SPLIT it into 2+ consecutive scenes with
+the next sentence as its own beat. CUT TO A NEW SCENE whenever the narration
+shifts subject, action, location, POV, or visual focus. A long internal-
+reflection passage may legitimately be 2-3 scenes back-to-back showing
+different angles of the same character thinking; a fast action passage may
+be 5-6 short scenes in a row.
+
+Total scene count emerges from content density — typically 25-40 for this
+mode. The schema accepts up to 40. Aim for the upper half (30+) on most
+detailed-mode topics; padding from 18 long beats to 30 tight beats is a
+quality WIN. DO NOT collapse two visually distinct moments into one long
+beat just to keep the count down.
+
+NEVER truncate a sentence mid-thought across scenes. Voice copy reads like
+spoken word, not text.
 """
 
 
@@ -215,9 +257,10 @@ PER-SCENE FIELDS (every scene needs ALL of these):
   - stock_query    : 2-4 ENGLISH keywords for Pexels search
   - character_names: list of cast names appearing in this scene (ai_image
                      mode). [] for a scenery shot. Omit / [] in stock modes.
-  - asset_count    : 1, 2, or 3 — how many visuals the composer should
-                     show during this scene. Use 1 for static reflective
-                     scenes; use 2-3 for action / montage / contrast.
+  - asset_count    : 1 by default (one image per beat — that's what scenes
+                     ARE in this planner). Only use 2-3 when a single beat
+                     genuinely needs a montage (e.g. "she tried again, and
+                     again, and again"). Most scenes should be 1.
   - kind           : "scene" (cover + outro are composer-side, not planner)
 """
 
@@ -339,12 +382,13 @@ HARD RULES (NEVER violate):
      MUST be a contiguous slice of the user's input (with at most light
      whitespace cleanup).
   2. Split the script into AS MANY scenes as the story needs — do NOT force
-     a fixed count. Break at natural breath/topic boundaries, usually one
-     sentence or one short paragraph per scene. Target 8-18 spoken seconds
-     per scene (Vietnamese reads at ~14 chars/sec, English ~15 chars/sec).
-     NEVER let a single scene exceed ~3 sentences / ~25 seconds — split a
-     long passage into multiple scenes so no scene drones on. A long story
-     legitimately yields 20-40 scenes; a short one yields 5-8.
+     a fixed count. CUT TO A NEW SCENE whenever the narration shifts subject,
+     action, location, POV, or visual focus — that is the only criterion.
+     Target 5-10 spoken seconds per scene (Vietnamese reads at ~14 chars/sec,
+     English ~15 chars/sec). NEVER let a single scene exceed ~3 sentences or
+     ~12 seconds of speech — one image lingering longer than that feels
+     monotonous. A long story legitimately yields 25-40 scenes; a short one
+     yields 5-12. Hard cap is 40 scenes (the schema rejects more).
   3. The CONCATENATED voice_script across all scenes, joined with single
      spaces, MUST reproduce the user's input (ignoring punctuation cleanup
      + whitespace normalization).

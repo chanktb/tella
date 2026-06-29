@@ -55,6 +55,26 @@ def get_client(api_key: str | None = None) -> genai.Client:
     return genai.Client(api_key=key)
 
 
+def is_transient_quota_error(exc: BaseException) -> bool:
+    """True when ``exc`` is a Gemini 429/503/quota error worth a key rotation.
+
+    Used by retry loops to decide whether to rebuild the client (rotating to
+    a different key from ``GEMINI_API_KEYS``) vs reusing the existing one.
+    Pattern-matches on substrings because google-genai exceptions don't
+    expose status codes uniformly across versions.
+    """
+    s = str(exc).upper()
+    return any(token in s for token in (
+        "RESOURCE_EXHAUSTED",
+        "RATE_LIMIT",
+        "RATE LIMIT",
+        "QUOTA",
+        "UNAVAILABLE",
+        " 429",
+        " 503",
+    ))
+
+
 def parse_json_loose(raw: str) -> dict | list:
     """Parse Gemini text into JSON, tolerating fences + trailing noise.
 
@@ -119,5 +139,6 @@ __all__ = [
     "DEFAULT_MODEL_PLAN_SHORT",
     "DEFAULT_MODEL_PLAN_DETAILED",
     "get_client",
+    "is_transient_quota_error",
     "parse_json_loose",
 ]

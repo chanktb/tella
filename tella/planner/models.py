@@ -158,6 +158,14 @@ class TellaScenePlan(BaseModel):
     channel_avatar: str = ""
     demo_mode: bool = False
 
+    # Single continuous narration. The TTS layer synthesizes EVERY scene's
+    # voice_script joined into one call (eliminates per-file leading/trailing
+    # silence that compounds at scene boundaries). The render layer mixes
+    # this onto the concatenated video-only stream at the very end.
+    # Per-scene ``audio_duration`` still drives visual timing — it's derived
+    # from this file's total duration × scene char proportion.
+    narration_audio_filename: str = ""
+
     total_duration: float = 0.0
 
 

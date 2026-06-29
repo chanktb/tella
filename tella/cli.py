@@ -55,8 +55,26 @@ logger = logging.getLogger("tella.cli")
 
 
 def _slugify(text: str, max_len: int = 40) -> str:
+    """Folder-safe slug, diacritic-stripped for readability.
+
+    "Điều gì xảy ra nếu Mặt Trời tắt" → "dieu_gi_xay_ra_neu_mat_troi_tat"
+    instead of the previous "i_u_g_x_y_ra_n_u_m_t_tr_i_t_t".
+
+    Vietnamese 'đ'/'Đ' has no NFKD decomposition into base + combining mark
+    so we handle it explicitly. Anything still non-ASCII after that
+    (Chinese / Japanese / Korean glyphs) collapses to underscores — acceptable
+    because those scripts have no obvious romanization to apply here.
+    """
     import re
-    slug = re.sub(r"[^A-Za-z0-9]+", "_", (text or "").strip("_").lower()).strip("_")
+    import unicodedata
+
+    raw = (text or "").strip().lower()
+    # Special-case Vietnamese đ → d (NFKD doesn't split this one).
+    raw = raw.replace("đ", "d").replace("Đ".lower(), "d")
+    # Decompose accented chars; drop the combining-mark codepoints.
+    decomposed = unicodedata.normalize("NFKD", raw)
+    ascii_only = "".join(c for c in decomposed if not unicodedata.combining(c))
+    slug = re.sub(r"[^a-z0-9]+", "_", ascii_only).strip("_")
     return (slug or "tella")[:max_len]
 
 
@@ -299,6 +317,26 @@ def main(argv: list[str] | None = None) -> int:
         except Exception as exc:
             logger.exception("pipeline failed: %s", exc)
             return 1
+
+        # Auto-ideated topic + saved channel → record in history.jsonl AFTER
+        # success so a failed render doesn't burn the topic.
+        if choice.topic_embedding and choice.channel_slug:
+            try:
+                from tella.channels import list_channels
+                from tella.ingest.seeder import append_history
+
+                for c in list_channels():
+                    if c.slug == choice.channel_slug and c.history_path:
+                        append_history(
+                            Path(c.history_path),
+                            choice.topic,
+                            choice.topic_embedding,
+                        )
+                        logger.info("history appended: %s", c.history_path)
+                        break
+            except Exception as exc:
+                logger.warning("history append failed (non-fatal): %s", exc)
+
         print(f"\n[OK] Final video: {final}")
         return 0
 

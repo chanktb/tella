@@ -190,7 +190,7 @@ instead. Fast, realistic, and free.
 
 ---
 
-## Channels (branding)
+## Channels (branding + optional scope)
 
 To brand your videos, save a channel once and pick it in the wizard. Create a
 folder under `channels/`:
@@ -205,6 +205,39 @@ channels/
 The wizard lists saved channels alongside "type a new name" and "no channel".
 Only the **name** is shown on screen (no handle/slug). An example channel ships
 under `channels/example/`.
+
+### Scoped channels — let Tella pick the topic for you
+
+If you give a channel a `niche_guide` + `seed_examples` + `defaults`, the
+wizard unlocks an **Auto AI topic** option for that channel. Gemini brainstorms
+a fresh topic in your channel's voice and dedups it against every previous
+topic via embedding cosine similarity — so even on episode 200 you won't get a
+rephrased rerun. Used topics are written to `channels/<slug>/history.jsonl`
+after the render succeeds (failed renders don't burn a topic).
+
+A worked example ships under `channels/cosmos-fiction/` — a speculative-cosmology
+Vietnamese channel. The full schema:
+
+```json
+{
+  "name": "My Brand",
+  "niche_guide": "one-paragraph description of what this channel is about",
+  "seed_examples": ["example topic 1", "example topic 2"],
+  "defaults": {
+    "lang": "vi",                 // vi/en/ja/ko/zh/de/fr/es
+    "media": "ai_image",          // ai_image / stock_photo / stock_video
+    "style": "cinematic",         // cinematic / cartoon (ai_image only)
+    "voice_gender": "male",       // male / female
+    "duration": "short",          // short / detailed
+    "aspect": "9:16"              // 9:16 / 16:9
+  }
+}
+```
+
+When a scoped channel is picked, the wizard hides the per-step questions
+covered by `defaults` and only asks: AI auto-topic, type your own, or drop a
+`.txt`. Channels without `niche_guide` keep the old behavior — just a name
+and avatar, the full 7-step wizard runs.
 
 ## Themes (advanced)
 

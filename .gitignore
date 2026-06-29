@@ -26,6 +26,9 @@ out/
 .tts_cache/
 channels/*/jobs/
 
+# ─── Per-channel state (auto-ideate history, like .env, never published) ───
+channels/*/history.jsonl
+
 # ─── OS ───
 .DS_Store
 Thumbs.db
