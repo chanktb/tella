@@ -1,16 +1,60 @@
 # Tella
 
-**Turn a topic into a narrated story video — fully on your own machine.**
+**An AI video content maker — turn any topic into a finished video, fully on your own machine.**
 
-Type a topic, answer a few questions, and Tella writes a scene-by-scene
-story, narrates it, finds or generates the visuals, and renders a finished
-MP4. It runs on a free-tier AI stack (no subscriptions), and every file
-stays on your hard drive.
+Drop in a topic (or your own `.txt` script). Tella plans the video scene
+by scene, narrates it, sources or generates the visuals, and renders a
+finished MP4. Built for **any subject, any channel, any purpose** —
+educational explainers, motivational shorts, brand promos, news recaps,
+language-learning clips, listicles, fables for kids… whatever you need
+to ship today. Runs on a free-tier AI stack (no subscriptions), and
+every file stays on your hard drive.
 
 ```
-You type:        "the lighthouse keeper who learned to rest"
+You type:        "5 study habits backed by neuroscience"
 Tella gives you: video.mp4   (1080×1920 or 1920×1080, narrated, ready to post)
 ```
+
+## Why Tella
+
+Tella sits in the same niche as
+[MoneyPrinterTurbo](https://github.com/harry0703/MoneyPrinterTurbo): one
+command, one topic, one finished AI-narrated video — no manual editing.
+Where it pushes further:
+
+- **Channel-scoped auto-topics.** Point Tella at a channel folder with a
+  `niche_guide` + `seed_examples` and it brainstorms a fresh topic on
+  brand, dedup'd against everything you've already shipped via embedding
+  similarity. Useful for daily-publishing channels that don't want to
+  hand-write briefs forever.
+- **Multi-character consistency.** In AI-image mode every recurring
+  character *and* the setting are locked across scenes — a two-character
+  fable keeps both characters consistent, an explainer keeps the same
+  host on screen all the way through.
+- **8 native TTS languages** — English, Vietnamese, Japanese, Korean,
+  Chinese, German, French, Spanish; auto-detected when you drop a script.
+- **Bring-your-own-script mode.** Drop a `.txt` and Tella narrates your
+  exact words (no rewrite, just scene-split + visuals + timing).
+- **Pace adapts to the content** — children's tales narrate slowly and
+  warmly, explainers narrate at a clear steady clip.
+
+### What you can make
+
+A non-exhaustive sample — all out of the same pipeline:
+
+| Use case | Topic example | Tip |
+|---|---|---|
+| Educational explainer | `how compound interest actually works` | `--theme cinematic`, detailed mode |
+| Motivational short | `the discipline of showing up early` | short mode |
+| News / topic recap | `what's behind the global chip shortage` | stock_video media |
+| Brand / product promo | `5 reasons our gel polish kit beats salon visits` | channel scope + 9:16 |
+| Listicle | `7 underrated cities in Vietnam` | stock_photo media |
+| Fable for kids | `the tortoise and the hare` | `--theme playful`, cartoon style |
+| Language-learning clip | `most common French phrases for travel` | French narration, 9:16 |
+| Mindfulness reflection | `letting go without giving up` | `--theme mindfulness` |
+
+Tella doesn't lock you into "story videos" — pick any of the
+[content styles](#themes-advanced) and the same pipeline adapts.
 
 ## Live demo
 
@@ -22,26 +66,19 @@ only a quick preview of the features. Running this repo **on your own machine is
 much faster** (your own CPU + your own free API keys, no shared queue). For real
 use, clone and run locally.
 
-- **Two ways in**: type a **topic** (Tella writes the story) or drop a **`.txt`
-  file** (Tella narrates *your* story word-for-word)
+### At a glance
+
+- **Two ways in**: type a **topic** (Tella writes the script) or drop a **`.txt`
+  file** (Tella narrates *your* script word-for-word)
 - **9:16** vertical (TikTok / Reels / Shorts) or **16:9** horizontal (YouTube)
 - Visuals from **AI image**, **stock photo**, or **stock video**. AI image
   offers two styles: **cinematic** (realistic/filmic) or **cartoon**
   (kid-friendly illustration)
-- **Reading pace adapts to the topic** — children's tales narrate slowly and
-  warmly, explainers narrate at a clear steady clip
-- **Optional channel branding** — show a small channel name (and a circular
-  avatar) on every scene. Save channels under `channels/` and pick one in the
-  wizard, type a fresh name, or leave it off for a clean, unbranded video
-- **Consistent characters** — in AI image mode every recurring character *and*
-  the setting are locked across scenes. A two-character fable keeps both
-  characters consistent (a tortoise stays a tortoise, a hare stays a hare),
-  instead of collapsing into one face
-- **Length**: topic mode is short (~60–120s) or detailed (~4–6 min); a dropped
-  story runs as long as it needs, split into scenes automatically
-- **8 narration languages**: English, Vietnamese, Japanese, Korean, Chinese,
-  German, French, Spanish — for a topic, pick the output language; for a `.txt`
-  file the language is auto-detected
+- **Optional channel branding** — small channel name (and a circular
+  avatar) on every scene. Save channels under `channels/` and pick one in
+  the wizard, type a fresh name, or leave it off for a clean unbranded video
+- **Length**: topic mode is short (~60–120s) or detailed (~4–6 min); a
+  dropped `.txt` runs as long as it needs, split into scenes automatically
 - Free narration via Edge TTS (no key needed); optional Google Chirp 3 HD upgrade
 
 ---
@@ -171,17 +208,18 @@ python -m tella \
 
 ## How visuals work
 
-**AI image** (`ai_image`) — the planner first writes a **cast** of character
-briefs and a **setting brief** (e.g. *"the tortoise: a small green tortoise,
-domed brown shell, slow steady eyes"* and *"the hare: a sleek brown hare, long
-ears, cocky smirk"* in *"a sun-drenched forest path, golden hour"*). Each scene
-declares which cast members appear in it, and those identities + the setting
-are prepended to that scene's image prompt — so Cloudflare Workers AI (FLUX)
-renders the **same characters in the same world across all scenes**. A
-multi-character story keeps *every* character consistent, and the cast is drawn
-faithfully (an animal stays an animal — it is never swapped for a human
-stand-in). This is what keeps a story visually coherent instead of looking like
-a pile of unrelated pictures.
+**AI image** (`ai_image`) — the planner first writes a **cast** of subject
+briefs and a **setting brief**. For a fable that might be a tortoise and a
+hare in a sun-drenched forest; for a money explainer it might be a young
+professional and an envelope of bills in a cosy apartment; for a brand promo
+it can be the product itself, locked across every scene. Each scene declares
+which cast members appear in it, and those identities + the setting are
+prepended to that scene's image prompt — so Cloudflare Workers AI (FLUX)
+renders the **same subjects in the same world across all scenes**. A
+multi-character video keeps *every* character consistent, and the cast is
+drawn faithfully (an animal stays an animal — it is never swapped for a
+human stand-in; a product stays the product). This is what keeps a video
+visually coherent instead of looking like a pile of unrelated pictures.
 
 **Stock photo / video** (`stock_photo`, `stock_video`) — pulls real Pexels
 media per scene. Character locking isn't possible with random stock, so Tella
@@ -241,16 +279,18 @@ and avatar, the full 7-step wizard runs.
 
 ## Themes (advanced)
 
-The wizard always uses **cinematic** — a versatile filmic look that renders the
-story's real subjects. If you want a different tone/style, pass `--theme` on the
-CLI:
+Themes are content-style presets — they shape narrator tone, vocabulary, and
+imagery so the same topic can ship as a clear-eyed explainer, a meditative
+parable, or a kids' cartoon. The wizard always uses **cinematic** (the most
+versatile look — good for explainers, promos, news, motivational, listicles).
+To pick a different style, pass `--theme` on the CLI:
 
-| Theme | Tone | Imagery |
-|---|---|---|
-| `cinematic` (default) | Vivid storyteller, filmic | Photorealistic, film grain, teal-orange grade |
-| `parable` | Meditative third-person fable | Watercolor, Studio-Ghibli-inspired |
-| `mindfulness` | Calm dharma-talk reflection | Recurring monk character, warm watercolor |
-| `playful` | Upbeat children's-book read-aloud | Vibrant cartoon, bold colors |
+| Theme | Tone | Imagery | Good for |
+|---|---|---|---|
+| `cinematic` (default) | Clear, vivid presenter | Photorealistic, film grain, teal-orange grade | Explainers, promos, listicles, news recaps, motivational |
+| `parable` | Meditative third-person fable | Watercolor, Studio-Ghibli-inspired | Allegories, life lessons, slow takes |
+| `mindfulness` | Calm dharma-talk reflection | Recurring monk character, warm watercolor | Meditation prompts, reflection, wellness |
+| `playful` | Upbeat children's-book read-aloud | Vibrant cartoon, bold colors | Fables for kids, edutainment, vocab clips |
 
 ---
 
