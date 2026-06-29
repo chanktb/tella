@@ -17,10 +17,8 @@ Tella gives you: video.mp4   (1080×1920 or 1920×1080, narrated, ready to post)
 
 ## Why Tella
 
-Tella sits in the same niche as
-[MoneyPrinterTurbo](https://github.com/harry0703/MoneyPrinterTurbo): one
-command, one topic, one finished AI-narrated video — no manual editing.
-Where it pushes further:
+One command, one topic, one finished AI-narrated video — no manual
+editing, no subscription stack, no cloud upload. What Tella brings:
 
 - **Channel-scoped auto-topics.** Point Tella at a channel folder with a
   `niche_guide` + `seed_examples` and it brainstorms a fresh topic on
@@ -37,6 +35,9 @@ Where it pushes further:
   exact words (no rewrite, just scene-split + visuals + timing).
 - **Pace adapts to the content** — children's tales narrate slowly and
   warmly, explainers narrate at a clear steady clip.
+- **100% on your machine, free-tier first.** Free Gemini + Edge TTS +
+  Cloudflare Workers AI / Pexels + ffmpeg; nothing uploaded to a third
+  party, no monthly bill.
 
 ### What you can make
 
